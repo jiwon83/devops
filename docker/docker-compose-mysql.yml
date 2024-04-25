@@ -1,0 +1,21 @@
+# Use root/example as user/password credentials
+version: "3"
+
+services:
+
+  # MySQL
+  mysql_container:
+    image: mysql
+    restart: on-failure
+    ports:
+      - ${MYSQL_BINDING_PORT}:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - TZ=Asia/Seoul
+    volumes:
+      - ./data/mysql/data:/var/lib/mysql
+      - ./data/mysql/config:/etc/mysql/conf.d
+
+

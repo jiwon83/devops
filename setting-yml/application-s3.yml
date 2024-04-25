@@ -1,0 +1,16 @@
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+
+cloud:
+  aws:
+    region:
+      static: ap-northeast-2
+    s3:
+      bucket: butter-wypl
+    stack:
+      auto: false
+    credentials:
+      secret-key: 8Wgkhv5s1cNgWTqZ8z56WyKDLfbN54WJjIFrw3tN
+      access-key: AKIA3FLDYQEWNF6LMMN5

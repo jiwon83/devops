@@ -1,0 +1,71 @@
+pipeline {
+    agent any //실행될 agent 정의
+    environment{
+        DOCKER_CREDENTIALS_ID = 'docker-hub-token'
+        DOCKER_IMAGE_NAME = 'wypl-web'
+        DOCKER_IMAGE_TAG = 'latest'
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                // GitLab 리포지토리를 클론하기 위한 단계
+                git branch: 'develop/back', credentialsId: 'gitlab-jiwon-token', url: 'https://lab.ssafy.com/s10-final/S10P31A602.git'
+            }
+        }
+        stage('Propertis Download') {
+            steps {
+                withCredentials( [file(credentialsId: 'backend-s3-yml', variable: 's3'),
+                                file(credentialsId: 'backend-jwt-yml', variable: 'jwt'),
+                                file(credentialsId: 'backend-redis-yml', variable: 'redis')
+                                ] ){
+                                    script {
+                                        sh '''
+                                            rm -rf backend/src/main/resources/security
+                                            mkdir backend/src/main/resources/security
+                                            cp $s3 backend/src/main/resources/security/application-s3.yml
+                                            cp $jwt backend/src/main/resources/security/application-jwt.yml
+                                            cp $redis backend/src/main/resources/security/application-redis.yml
+                                        '''
+                                    }
+                                }
+            }
+        }
+        stage('Build') {
+            steps {
+                dir('backend'){
+                    
+                    // 빌드 스크립트를 실행합니다.
+                    sh './gradlew clean bootJar -x test //build'
+                }
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Docker 이미지 빌드
+                    docker.build("${env.DOCKER_IMAGE_NAME}:${env.DOCKER_IMAGE_TAG}")
+                }
+            }
+        }
+        /**
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    // Docker Hub에 로그인
+                    docker.withRegistry('https://index.docker.io/v1/', env.DOCKER_CREDENTIALS_ID) {
+                        // Docker 이미지 푸시
+                        docker.image("${env.DOCKER_IMAGE_NAME}:${env.DOCKER_IMAGE_TAG}").push()
+                    }
+                }
+            }
+        }
+        */
+        
+    }
+    post{
+        success{
+            echo 'Build Success!!'
+        }
+    }
+}
