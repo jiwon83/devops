@@ -1,0 +1,17 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('SSH') {
+            steps {
+                sshagent(credentials: ['43.203.229.26-ssh']) {
+                    sh'''
+                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
+                            uptime
+                        '
+                    '''
+                }
+            }
+        }
+    }
+}

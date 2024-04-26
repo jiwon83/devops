@@ -1,9 +1,11 @@
 pipeline {
     agent any //실행될 agent 정의
-    environment{
+    environment {
         DOCKER_CREDENTIALS_ID = 'docker-hub-token'
         DOCKER_IMAGE_NAME = 'wypl-web'
         DOCKER_IMAGE_TAG = 'latest'
+        JAR_FILE = 'backend/build/libs/*.jar'
+        
     }
 
     stages {
@@ -17,7 +19,8 @@ pipeline {
             steps {
                 withCredentials( [file(credentialsId: 'backend-s3-yml', variable: 's3'),
                                 file(credentialsId: 'backend-jwt-yml', variable: 'jwt'),
-                                file(credentialsId: 'backend-redis-yml', variable: 'redis')
+                                file(credentialsId: 'backend-redis-yml', variable: 'redis'),
+                                file(credentialsId: 'backend-oauth-yml', variable: 'oauth')
                                 ] ){
                                     script {
                                         sh '''
@@ -26,6 +29,7 @@ pipeline {
                                             cp $s3 backend/src/main/resources/security/application-s3.yml
                                             cp $jwt backend/src/main/resources/security/application-jwt.yml
                                             cp $redis backend/src/main/resources/security/application-redis.yml
+                                            cp $oauth backend/src/main/resources/security/application-oauth.yml
                                         '''
                                     }
                                 }
@@ -40,43 +44,44 @@ pipeline {
                 }
             }
         }
-        stage('Copy Jar File'){
-            steps {
-                // 복사 명령을 실행합니다. 'cp' 명령은 파일을 복사합니다.
-                sh 'cp backend/build/libs/*.jar ./data/jenkins/data/build/'
-            }
-        }
         stage('Build Docker Image') {
             steps {
-                sshagent(withCredentials: ['43.203.229.26-ssh']) {
+                sshagent(credentials: ['43.203.229.26-ssh']) {
                     sh'''
-                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 ;
-                            cd ./data/jenkins/data/workspace/cd
+                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
+                            cd ./waffle/deploy
+                            echo "Building Docker image..."
+                            JAR_NAME=$(find /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/deploy-test/backend/build/libs/ -name '*.jar' -exec basename {} \\; | head -n 1)
+                            find /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/deploy-test/backend/build/libs/ -name "*.jar" -exec basename {} \\;
+                            echo "Jar file found: $JAR_PATH"
+                            docker build --build-arg JAR_FILE=ci-cd/data/jenkins/data/workspace/deploy-test/backend/build/libs/$JAR_NAME -t wypl-web:latest .
+     
                         '
                     '''
                 }
-                /*
-                script {
-                    // Docker 이미지 빌드
-                    docker.build("${env.DOCKER_IMAGE_NAME}:${env.DOCKER_IMAGE_TAG}")
-                }
-                */
+            
             }
         }
-        /**
-        stage('Push to Docker Hub') {
+        stage('Deploy'){
             steps {
-                script {
-                    // Docker Hub에 로그인
-                    docker.withRegistry('https://index.docker.io/v1/', env.DOCKER_CREDENTIALS_ID) {
-                        // Docker 이미지 푸시
-                        docker.image("${env.DOCKER_IMAGE_NAME}:${env.DOCKER_IMAGE_TAG}").push()
-                    }
+                sshagent(credentials: ['43.203.229.26-ssh']) {
+                    sh'''
+                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
+                        
+                            echo "Depoly Spring Boot!!"
+                            DOCKER_IMAGE_NAME="wypl-web"
+                            if [ $(docker ps -q -f name=$DOCKER_IMAGE_NAME) ]; then
+                                echo 'Stopping and removing Docker container...'
+                                docker stop $DOCKER_IMAGE_NAME
+                                docker rm $DOCKER_IMAGE_NAME
+                            fi
+                            docker run -d --name $DOCKER_IMAGE_NAME -p 8800:8080 wypl-web:latest
+                        '
+                        
+                    '''
                 }
             }
-        }
-        */
-        
+        }    
     }
     post{
         success{
