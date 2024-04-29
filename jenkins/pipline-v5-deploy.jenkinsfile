@@ -1,3 +1,4 @@
+// Dockerfile 위치 변경
 pipeline {
     agent any //실행될 agent 정의
     environment {
@@ -49,10 +50,10 @@ pipeline {
                 sshagent(credentials: ['43.203.229.26-ssh']) {
                     sh'''
                         ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
-                            cd ./waffle/deploy
+                            cd /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/dev-backend-core/backend
                             echo "Building Docker image..."
-                            JAR_NAME=$(find /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/dev-backend-core/backend/build/libs/ -name '*.jar' -exec basename {} \\; | head -n 1)
-                            docker build --build-arg JAR_FILE=ci-cd/data/jenkins/data/workspace/deploy-test/backend/build/libs/$JAR_NAME -t wypl-web:latest .
+                            JAR_NAME=$(find ./build/libs/ -name '*.jar' -exec basename {} \\; | head -n 1)
+                            docker build --build-arg JAR_FILE=./build/libs/$JAR_NAME -t wypl-web:latest .
      
                         '
                     '''
