@@ -3,12 +3,19 @@ version: "3"
 services:
 
   # NGINX
-  mysql_container:
+  nginx_container:
+    container_name: nginx_container
     image: nginx
     ports:
       - ${NGINX_BINDING_PORT}:80
     environment:
-      - NGINX_HOST=wypl.com
+      - NGINX_HOST=${SERVER_NAME}
       - NGINX_PORT=80
     volumes:
       - ./data/templates:/etc/nginx/templates
+      - ./html:/usr/share/nginx/html
+
+  # REACT
+  react_container:
+    container_name: react_container
+    

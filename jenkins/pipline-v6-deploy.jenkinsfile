@@ -13,7 +13,7 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 // GitLab 리포지토리를 클론하기 위한 단계
-                git branch: 'S10P31A602-289', credentialsId: 'gitlab-jiwon-token', url: 'https://lab.ssafy.com/s10-final/S10P31A602.git'
+                git branch: 'develop/back', credentialsId: 'gitlab-jiwon-token', url: 'https://lab.ssafy.com/s10-final/S10P31A602.git'
             }
         }
         stage('Propertis Download') {
@@ -39,20 +39,20 @@ pipeline {
         stage('Build') {
             steps {
                 dir('backend'){
-                    sh './gradlew clean copyOasToSwagger && ./gradlew clean bootJar -x test'
+                    
+                    // 빌드 스크립트를 실행합니다.
+                    sh '''
+                        ./gradlew clean copyOasToSwagger
+                        ./gradlew clean bootJar -x test
+
+                    ''' //build
                 }
             }
         }
         stage('Build Docker Image') {
             steps {
                 sshagent(credentials: ['43.203.229.26-ssh']) {
-                    sh'''
-                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
-                            cd /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/dev-backend-core/backend
-                            echo "Building Docker image..."
-                            docker build -t wypl-web:latest .
-                        '
-                    '''
+                    sh 'bash .backend/build_docker_image.sh'
                 }
             
             }
