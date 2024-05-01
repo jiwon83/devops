@@ -5,8 +5,8 @@ services:
 
   # MySQL
   mysql_container:
+    container_name: mysql_container
     image: mysql
-    restart: on-failure
     ports:
       - ${MYSQL_BINDING_PORT}:3306
     environment:
@@ -17,5 +17,29 @@ services:
     volumes:
       - ./data/mysql/data:/var/lib/mysql
       - ./data/mysql/config:/etc/mysql/conf.d
+    restart: on-failure
 
+  # Redis
+  redis_container:
+    container_name: redis_container
+    image: redis
+    ports:
+      - ${REDIS_BINDING_PORT}:6379
+    volumes:
+      - ./data/redis/data:/data
+      - ./data/redis/config:/usr/local/conf/redis.conf
+    restart: on-failure
 
+  # MongoDB
+  mongo_container:
+    container_name: mongo_container
+    image: mongo
+    ports:
+      - ${MONGO_BINDING_PORT}:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE}
+    volumes:
+      - ./data/mongo/db:/data/db
+    restart: on-failure
