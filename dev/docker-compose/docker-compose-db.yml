@@ -22,12 +22,14 @@ services:
   # Redis
   redis_container:
     container_name: redis_container
-    image: redis
+    image: bitnami/redis
     ports:
       - ${REDIS_BINDING_PORT}:6379
+    environment:
+      - REDIS_PASSWORD=wyplA602!@
     volumes:
       - ./data/redis/data:/data
-      - ./data/redis/config:/usr/local/conf/redis.conf
+      - ./data/redis/config:/usr/local/etc/redis
     restart: on-failure
 
   # MongoDB
