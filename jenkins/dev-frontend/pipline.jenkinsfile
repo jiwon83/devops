@@ -9,29 +9,30 @@ pipeline {
         }
         stage('Install Dependencies'){
             steps {
-                sshagent(credentials: ['43.203.229.26-ssh']) {
-                    sh'''
-                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
-                            cd /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/dev-frontend/frontend
-                            sudo npm install
-                        ' 
-                    '''
-                }
+                // Set the SHELL environment variable & Install pnpm
+                sh '''
+                    echo "Using sehll: $SHELL"
+                    export SHELL=/bin/bash
+                    curl -fsSL https://get.pnpm.io/install.sh | sh -
+                    cd frontend
+                    pnpm run build
+                '''
             }
         }
         stage('Build') {
             steps {
-                sshagent(credentials: ['43.203.229.26-ssh']) {
-                    sh'''
-                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
-                            cd /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/dev-frontend/frontend
-                            sudo npm run build
-                        ' 
-                    '''
+                // Build with pnpm
+                dir('frontend') {
+                    sh 'pnpm run build'
                 }
             }
         }
-        stage('Deploy') {
+        stage('SCP Build File') {
+            steps{
+                
+            }
+        }
+        stage('Nginx Reload') {
             steps {
                 sshagent(credentials: ['43.203.229.26-ssh']) {
                     sh'''

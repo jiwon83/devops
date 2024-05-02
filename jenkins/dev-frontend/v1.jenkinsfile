@@ -1,0 +1,48 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git branch: 'develop/front', credentialsId: 'gitlab-jiwon-token', url: 'https://lab.ssafy.com/s10-final/S10P31A602.git'
+            }
+        }
+        stage('Install Dependencies'){
+            steps {
+                sshagent(credentials: ['43.203.229.26-ssh']) {
+                    sh'''
+                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
+                            cd /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/dev-frontend/frontend
+                            sudo npm install
+                        ' 
+                    '''
+                }
+            }
+        }
+        stage('Build') {
+            steps {
+                sshagent(credentials: ['43.203.229.26-ssh']) {
+                    sh'''
+                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
+                            cd /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/dev-frontend/frontend
+                            sudo npm run build
+                        ' 
+                    '''
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sshagent(credentials: ['43.203.229.26-ssh']) {
+                    // SCP
+                    // SSH -> nginx reload
+                    sh'''
+                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
+                            cp -rf /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/dev-frontend/frontend/build/ ~/waffle/deploy/frontend
+                        ' 
+                    '''
+                }
+            }
+        }
+    }
+}
