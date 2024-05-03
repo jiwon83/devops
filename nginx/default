@@ -1,0 +1,31 @@
+#####
+# Default server configuration
+#####
+
+server {
+        listen 80 default_server;
+        listen [::]:80 default_server;
+
+        root /var/www/html;
+
+        server_name wypl.site;
+
+        location / {
+                return 301 https://wypl.site$request_uri;
+        }
+}
+
+# SSL 추가
+server {
+        listen 443 ssl;
+        server_name wypl.site;
+
+        ssl_certificate /etc/letsencrypt/live/wypl.site/fullchain.pem;  # SSL 인증서 파일
+        ssl_certificate_key /etc/letsencrypt/live/wypl.site/privkey.pem;  # SSL 키 파일
+
+        location / {
+		root /home/ubuntu/waffle/deploy/frontend;
+                index index.html index.htm;
+                try_files $uri $uri/ /index.html;
+	}
+}
