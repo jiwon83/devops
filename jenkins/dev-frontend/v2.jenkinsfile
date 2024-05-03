@@ -21,21 +21,25 @@ pipeline {
             steps {
                 sshagent(credentials: ['43.203.229.26-ssh']) {
                     sh'''
+                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
+                            if [ ! -d "/home/ubuntu/waffle/deploy/frontend" ]; then
+                                echo "폴더가 존재하지 않습니다."
+                                sudo mkdir /home/ubuntu/waffle/deploy/frontend
+                                sudo chown ubuntu:ubuntu /home/ubuntu/waffle/deploy/frontend
+                            else
+                                echo "폴더가 존재합니다."
+                                sudo rm -r /home/ubuntu/waffle/deploy/frontend
+                            fi
+                        ' 
+                    '''
+                    sh'''
+                        pwd
                         scp -r "frontend/dist" ubuntu@43.203.229.26:/home/ubuntu/waffle/deploy/frontend
                     '''
                 }
             }
         }
-        stage('Nginx Reload') {
-            steps {
-                sshagent(credentials: ['43.203.229.26-ssh']) {
-                    sh'''
-                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
-                            sudo systemctl reload nginx
-                        '
-                    '''
-                }
-            }
-        }
+       
+        
     }
 }
