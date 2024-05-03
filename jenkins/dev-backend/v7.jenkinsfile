@@ -23,8 +23,12 @@ pipeline {
             steps {
                 withCredentials( [file(credentialsId: 'backend-s3-yml', variable: 's3'),
                                 file(credentialsId: 'backend-jwt-yml', variable: 'jwt'),
+                                file(credentialsId: 'backend-logging-yml', variable: 'logging'),
+                                file(credentialsId: 'backend-mongo-yml', variable: 'mongo'),
+                                file(credentialsId: 'backend-mysql-yml', variable: 'mysql'),
+                                file(credentialsId: 'backend-oauth-yml', variable: 'oauth'),
                                 file(credentialsId: 'backend-redis-yml', variable: 'redis'),
-                                file(credentialsId: 'backend-oauth-yml', variable: 'oauth')
+                                file(credentialsId: 'backend-weather-yml', variable: 'weather')
                                 ] ){
                                     script {
                                         sh '''
@@ -32,8 +36,12 @@ pipeline {
                                             mkdir backend/src/main/resources/security
                                             cp $s3 backend/src/main/resources/security/application-s3.yml
                                             cp $jwt backend/src/main/resources/security/application-jwt.yml
-                                            cp $redis backend/src/main/resources/security/application-redis.yml
+                                            cp $logging backend/src/main/resources/security/application-logging.yml
+                                            cp $mongo backend/src/main/resources/security/application-mongo.yml
+                                            cp $mysql backend/src/main/resources/security/application-mysql.yml
                                             cp $oauth backend/src/main/resources/security/application-oauth.yml
+                                            cp $redis backend/src/main/resources/security/application-redis.yml
+                                            cp $weather backend/src/main/resources/security/application-weather.yml
                                         '''
                                     }
                                 }
