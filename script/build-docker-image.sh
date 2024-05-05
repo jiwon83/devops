@@ -1,14 +1,9 @@
-#!/bin/bash
-# This script builds a Docker image on a remote server
+#!/bin/sh
+echo "Building Docker image..."
+REPOSITORY_NAME= "$1" #"wypl-web-dev"
+TAG="latest"
+docker build -t "$REPOSITORY_NAME":"$TAG" .
 
-# SSH into the remote server
-ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
-    # Navigate to the project directory
-    cd /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/dev-backend-core/backend
-
-    # Display message
-    echo "Building Docker image..."
-
-    # Build Docker image
-    docker build --build-arg -t wypl-web:latest .
-'
+# date tag 
+# DATE_TAG=$(date +%y%m%d%H%M)
+# docker build -t "$REPOSITORY_NAME":"$DATE_TAG" .

@@ -1,0 +1,96 @@
+/**
+ 변경 사항
+    - 이미지 빌드 스크립트 분리
+*/
+pipeline {
+    agent any //실행될 agent 정의
+    environment {
+        DOCKER_CREDENTIALS_ID = 'docker-hub-token'
+        DOCKER_IMAGE_NAME = 'wypl-web-dev'
+        DOCKER_IMAGE_TAG = 'latest'
+        JAR_FILE = 'backend/build/libs/*.jar'
+        
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                // GitLab 리포지토리를 클론하기 위한 단계
+                git branch: 'develop/back', credentialsId: 'gitlab-jiwon-token', url: 'https://lab.ssafy.com/s10-final/S10P31A602.git'
+            }
+        }
+        stage('Propertis Download') {
+            steps {
+                withCredentials( [file(credentialsId: 'backend-s3-yml', variable: 's3'),
+                                file(credentialsId: 'backend-jwt-yml', variable: 'jwt'),
+                                file(credentialsId: 'backend-logging-yml', variable: 'logging'),
+                                file(credentialsId: 'backend-mongo-yml', variable: 'mongo'),
+                                file(credentialsId: 'backend-mysql-yml', variable: 'mysql'),
+                                file(credentialsId: 'backend-oauth-yml', variable: 'oauth'),
+                                file(credentialsId: 'backend-redis-yml', variable: 'redis'),
+                                file(credentialsId: 'backend-weather-yml', variable: 'weather')
+                                ] ){
+                                    script {
+                                        sh '''
+                                            rm -rf backend/src/main/resources/security
+                                            mkdir backend/src/main/resources/security
+                                            cp $s3 backend/src/main/resources/security/application-s3.yml
+                                            cp $jwt backend/src/main/resources/security/application-jwt.yml
+                                            cp $logging backend/src/main/resources/security/application-logging.yml
+                                            cp $mongo backend/src/main/resources/security/application-mongo.yml
+                                            cp $mysql backend/src/main/resources/security/application-mysql.yml
+                                            cp $oauth backend/src/main/resources/security/application-oauth.yml
+                                            cp $redis backend/src/main/resources/security/application-redis.yml
+                                            cp $weather backend/src/main/resources/security/application-weather.yml
+                                        '''
+                                    }
+                                }
+            }
+        }
+        stage('Build') {
+            steps {
+                dir('backend'){
+                    // sh './gradlew clean copyOasToSwagger && ./gradlew bootJar'
+                    sh './gradlew bootJar'
+                }
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                sshagent(credentials: ['43.203.229.26-ssh']) {
+                    sh'''
+                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
+                            cd /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/dev-backend-core/backend
+                            sh build-docker-image.sh   
+                        '
+                    '''
+                }
+            }
+        }
+        stage('Deploy'){
+            steps {
+                sshagent(credentials: ['43.203.229.26-ssh']) {
+                    sh'''
+                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
+                        
+                            echo "Depoly Spring Boot!!"
+                            DOCKER_IMAGE_NAME="wypl-web-dev"
+                            if [ $(docker ps -aq -f name=$DOCKER_IMAGE_NAME) ]; then
+                                echo 'Stopping and removing Docker container...'
+                                docker stop $DOCKER_IMAGE_NAME
+                                docker rm $DOCKER_IMAGE_NAME
+                            fi
+                            docker run -d --name $DOCKER_IMAGE_NAME -e PROFILE=dev -p 8800:8080 wypl-web-dev:latest
+                        '
+                        
+                    '''
+                }
+            }
+        }    
+    }
+    post{
+        success{
+            echo 'Build Success!!'
+        }
+    }
+}
