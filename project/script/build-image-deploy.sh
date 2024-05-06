@@ -12,7 +12,6 @@ docker build -t "$NAME":"$TAG" .
 
 # date tag 
 # DATE_TAG=$(date +%y%m%d%H%M)
-# docker build -t "$REPOSITORY_NAME":"$DATE_TAG" .
 
 # Deploy
 if [ $(docker ps -aq -f name=$NAME) ]; then
