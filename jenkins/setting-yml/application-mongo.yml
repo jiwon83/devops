@@ -1,0 +1,43 @@
+spring:
+  config:
+    activate:
+      on-profile:
+        - local
+        - default
+
+de:
+  flapdoodle:
+    mongodb:
+      embedded:
+        version: 4.0.2
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: dev
+  data:
+    mongodb:
+      host: 43.203.229.26
+      port: 8303
+      username: wypl
+      password: wyplA602!@
+      authentication-database: wypl
+      uri: mongodb://wypl:wyplA602!%40@43.203.229.26:8303/wypl
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: prod
+  data:
+    mongodb:
+      host: 43.203.229.26
+      port: 18303
+      database: wypl
+      username: wypl
+      password: wyplA602!@
+      authentication-database: wypl
+      uri: mongodb://wypl:wyplA602!%40@43.203.229.26:18303/
