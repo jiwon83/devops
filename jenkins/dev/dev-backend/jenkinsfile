@@ -1,0 +1,144 @@
+/**
+ 변경 사항
+    - Profile, Port 번호, 서비스 이름 환경 변수 추가
+    - Deploy 관련 스크립트 추가
+*/
+pipeline {
+    agent any //실행될 agent 정의
+    environment {
+        DOCKER_CREDENTIALS_ID = 'docker-hub-token'
+        DOCKER_IMAGE_NAME = 'wypl-web-dev'
+        DOCKER_IMAGE_TAG = 'latest'
+        JAR_FILE = 'backend/build/libs/*.jar'
+        
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                // GitLab 리포지토리를 클론하기 위한 단계
+                git branch: 'develop/back', credentialsId: 'gitlab-jiwon-token', url: 'https://lab.ssafy.com/s10-final/S10P31A602.git'
+            }
+        }
+        stage('Propertis Download') {
+            steps {
+                withCredentials( [file(credentialsId: 'backend-s3-yml', variable: 's3'),
+                                file(credentialsId: 'backend-jwt-yml', variable: 'jwt'),
+                                file(credentialsId: 'backend-logging-yml', variable: 'logging'),
+                                file(credentialsId: 'backend-mongo-yml', variable: 'mongo'),
+                                file(credentialsId: 'backend-mysql-yml', variable: 'mysql'),
+                                file(credentialsId: 'backend-oauth-yml', variable: 'oauth'),
+                                file(credentialsId: 'backend-redis-yml', variable: 'redis'),
+                                file(credentialsId: 'backend-weather-yml', variable: 'weather')
+                                ] ){
+                                    script {
+                                        sh '''
+                                            rm -rf backend/src/main/resources/security
+                                            mkdir backend/src/main/resources/security
+                                            cp $s3 backend/src/main/resources/security/application-s3.yml
+                                            cp $jwt backend/src/main/resources/security/application-jwt.yml
+                                            cp $logging backend/src/main/resources/security/application-logging.yml
+                                            cp $mongo backend/src/main/resources/security/application-mongo.yml
+                                            cp $mysql backend/src/main/resources/security/application-mysql.yml
+                                            cp $oauth backend/src/main/resources/security/application-oauth.yml
+                                            cp $redis backend/src/main/resources/security/application-redis.yml
+                                            cp $weather backend/src/main/resources/security/application-weather.yml
+                                        '''
+                                    }
+                                }
+            }
+        }
+        stage('Build') {
+            steps {
+                dir('backend'){
+                    // sh 'SPRING_PROFILES_ACTIVE=jenkins ./gradlew clean copyOasToSwagger'
+                    sh './gradlew bootJar'
+                }
+            }
+        }
+        stage('Build Docker Image & Deploy') {
+            steps {
+                sshagent(credentials: ['43.203.229.26-ssh']) {
+                    sh'''
+                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
+                            cd /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/dev-backend-core/backend
+                            sudo chmod +x build-image-and-deploy.sh
+                            sh build-image-and-deploy.sh dev 8800 wypl-web-dev  
+                        '
+                    '''
+                }
+            }
+        }    
+        stage('Health Check') {
+            steps {
+                sh'''
+                    URL="https://dev-api.wypl.site/actuator/health"
+                    MAX_TRIES=10
+                    tries=0
+                    
+                    while [ $tries -lt $MAX_TRIES ]; do
+                        response=$(curl -s $URL)
+                        if echo "$response" | grep -q "UP"; then
+                            echo "Success: Server is UP!"
+                            break
+                        else
+                            echo "Waiting Server..."
+                            tries=$((tries+1))
+                            if [ $tries -lt $MAX_TRIES ]; then
+                                echo "Retrying in 10 seconds..."
+                                sleep 10
+                            else
+                                echo "Failed: Server Is Down..."
+                                exit 1
+                            fi
+                        fi
+                    done
+                '''
+            }
+        }
+    }
+    post {
+        success {
+            script {
+                withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
+                    def gitBranch = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+                    def gitCommitMessage = sh(script: "git log -1 --pretty=format:'%s'", returnStdout: true).trim()
+                    def gitAuthor = sh(script: "git log -1 --pretty=format:'%an'", returnStdout: true).trim()
+                    
+                    
+                    discordSend description: """
+                    담당자 : ${gitAuthor}
+                    커밋 메시지 : ${gitCommitMessage}
+                    실행 시간 : ${currentBuild.duration / 1000}s
+                    웹 사이트 : [Dev - What's Your Plan](https://dev.wypl.site)
+                    API 문서 : [Wypl Swagger Docs](https://dev-api.wypl.site/static/swagger-ui.html#/)
+                    서버 상태 확인 : [Health Check](https://dev-api.wypl.site/actuator/health)
+                    """,
+                    link: env.BUILD_URL, result: currentBuild.currentResult, 
+                    title: "🛠 [D️ev] Backend : ${currentBuild.displayName} Success 🚀️", 
+                    webhookURL: "$DISCORD"
+                }
+            }
+        }
+        failure {
+            script {
+                withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
+                    def gitBranch = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+                    def gitCommitMessage = sh(script: "git log -1 --pretty=format:'%s'", returnStdout: true).trim()
+                    def gitAuthor = sh(script: "git log -1 --pretty=format:'%an'", returnStdout: true).trim()
+                    
+                    
+                    discordSend description: """
+                    담당자 : ${gitAuthor}
+                    커밋 메시지 : ${gitCommitMessage}
+                    실행 시간 : ${currentBuild.duration / 1000}s
+                    """,
+                    link: env.BUILD_URL, result: currentBuild.currentResult, 
+                    title: "🛠 [D️ev] Backend : ${currentBuild.displayName} Failure 😭", 
+                    webhookURL: "$DISCORD",
+                    notes: "@here"
+                }
+            }
+        }
+    }
+}

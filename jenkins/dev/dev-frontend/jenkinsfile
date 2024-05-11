@@ -1,0 +1,103 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git branch: 'develop/front', credentialsId: 'gitlab-jiwon-token', url: 'https://lab.ssafy.com/s10-final/S10P31A602.git'
+            }
+        }
+        stage('Propertis Download') {
+            steps {
+                withCredentials( [file(credentialsId: 'frontend-env-dev', variable: 'env')] ){
+                    script {
+                        sh 'cp $env frontend/.env.dev'
+                    }
+                }
+            }
+        }
+        stage('Install Dependencies'){
+            steps {
+                dir('frontend') {
+                    nodejs(nodeJSInstallationName: 'NodeJS 22.0.0') {
+                        sh 'npm install && npm run build:dev'
+                    }
+                }
+            }
+        }
+        stage('Rmove Frontend Files') {
+            steps {
+                sshagent(credentials: ['43.203.229.26-ssh']) {
+                    sh'''
+                        ssh ubuntu@43.203.229.26 `
+                            cd /home/ubuntu/waffle/dev/frontend
+                            rm -rf *
+                        `
+                    '''
+                }
+            }
+        }
+        stage('Copy To Deploy Server') {
+            steps {
+                sshagent(credentials: ['43.203.229.26-ssh']) {
+                    sh'''
+                        scp -r "frontend/dist" ubuntu@43.203.229.26:/home/ubuntu/waffle/dev/frontend
+                    '''
+                }
+            }
+        }
+        stage('Nginx Reload') {
+            steps {
+                sshagent(credentials: ['43.203.229.26-ssh']) {
+                    sh'''
+                        ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
+                            sudo systemctl reload nginx
+                        '
+                    '''
+                }
+            }
+        }
+    }
+    post {
+        success {
+            script {
+                withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
+                    def gitBranch = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+                    def gitCommitMessage = sh(script: "git log -1 --pretty=format:'%s'", returnStdout: true).trim()
+                    def gitAuthor = sh(script: "git log -1 --pretty=format:'%an'", returnStdout: true).trim()
+                    
+                    
+                    discordSend description: """
+                    담당자 : ${gitAuthor}
+                    커밋 메시지 : ${gitCommitMessage}
+                    실행 시간 : ${currentBuild.duration / 1000}s
+                    웹 사이트 : [Dev - What's Your Plan](https://dev.wypl.site)
+                    """,
+                    link: env.BUILD_URL, result: currentBuild.currentResult, 
+                    title: "🛠 [D️ev] Frontend : ${currentBuild.displayName} Success 🚀️", 
+                    webhookURL: "$DISCORD"
+                }
+            }
+        }
+        failure {
+            script {
+                withCredentials([string(credentialsId: 'Discord-Webhook', variable: 'DISCORD')]) {
+                    def gitBranch = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+                    def gitCommitMessage = sh(script: "git log -1 --pretty=format:'%s'", returnStdout: true).trim()
+                    def gitAuthor = sh(script: "git log -1 --pretty=format:'%an'", returnStdout: true).trim()
+                    
+                    
+                    discordSend description: """
+                    담당자 : ${gitAuthor}
+                    커밋 메시지 : ${gitCommitMessage}
+                    실행 시간 : ${currentBuild.duration / 1000}s
+                    """,
+                    link: env.BUILD_URL, result: currentBuild.currentResult, 
+                    title: "🛠 [D️ev] Frontend : ${currentBuild.displayName} Failure 😭", 
+                    webhookURL: "$DISCORD",
+                    notes: "@here"
+                }
+            }
+        }
+    }
+}
