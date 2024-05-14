@@ -2,6 +2,7 @@
  변경 사항
     - Profile, Port 번호, 서비스 이름 환경 변수 추가
     - Deploy 관련 스크립트 추가
+    - log 파일 저장할 volume 환경 변수로 분리
 */
 pipeline {
     agent any //실행될 agent 정의
@@ -51,8 +52,7 @@ pipeline {
         stage('Build') {
             steps {
                 dir('backend'){
-                    // sh 'SPRING_PROFILES_ACTIVE=jenkins ./gradlew clean copyOasToSwagger'
-                    sh './gradlew bootJar'
+                    sh './gradlew clean bootJar'
                 }
             }
         }
@@ -63,7 +63,7 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no ubuntu@43.203.229.26 '
                             cd /home/ubuntu/waffle/deploy/ci-cd/data/jenkins/data/workspace/dev-backend-core/backend
                             sudo chmod +x build-image-and-deploy.sh
-                            sh build-image-and-deploy.sh dev 8800 wypl-web-dev  
+                            sh build-image-and-deploy.sh dev 8800 wypl-web-dev wypl
                         '
                     '''
                 }
