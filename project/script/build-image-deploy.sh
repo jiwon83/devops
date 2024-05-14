@@ -1,23 +1,36 @@
 #!/bin/sh
 
-# Variable
-PROFILE="$1" #"dev"
+############ Variable ############
+PROFILE="$1"
 PORT="$2"
-NAME="$3" #"wypl-web-dev"
+IMAGE_NAME="$3" # image name
 TAG="latest"
+VOLUME_PROFILE="$4" # volume directory name of profile
+HOST_VOLUME_PATH="/home/ubuntu/$VOLUME_PROFILE/logs"
+DOCKER_VOLUME_PATH="/logs"
 
-# Build Docker Image
+########### Build Docker Image ##########
 echo "Building Docker image..."
-docker build -t "$NAME":"$TAG" .
+docker build -t "$IMAGE_NAME":"$TAG" .
 
-# date tag 
+# date tag
 # DATE_TAG=$(date +%y%m%d%H%M)
+# docker build -t "$REPOSITORY_NAME":"$DATE_TAG" .
 
-# Deploy
-if [ $(docker ps -aq -f name=$NAME) ]; then
-    echo 'Stopping and removing Docker container...'
-    docker stop $NAME
-    docker rm $NAME
+########### Make Log Directory ##########
+if [ ! -d "/home/ubuntu/$VOLUME_PATH/logs" ]; then
+    echo "Making log directory..."
+    mkdir -p /home/ubuntu/$VOLUME_PATH/logs
 fi
-echo "Depoly Spring Boot!!"
-docker run -d --name $NAME -e PROFILE=$PROFILE -p $PORT:8080 $NAME:$TAG
+
+########## Deploy ##########
+CONTAINER_IDS=$(docker ps -aqf "name=$IMAGE_NAME") #$(docker ps -aq --filter ancestor=$IMAGE_NAME)
+echo "Find CONTAINER_IDS ...  >>  $CONTAINER_IDS"
+
+if [ -n "$CONTAINER_IDS" ]; then
+    echo 'Stopping and removing Docker container...'
+    docker stop $CONTAINER_IDS
+    docker rm $CONTAINER_IDS
+fi
+echo "Deploy Spring Boot!!"
+docker run -d --name $IMAGE_NAME -e PROFILE=$PROFILE -p $PORT:8080 -v $HOST_VOLUME_PATH:$DOCKER_VOLUME_PATH $IMAGE_NAME:$TAG
