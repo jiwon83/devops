@@ -43,7 +43,9 @@ spring:
 spring:
   config:
     activate:
-      on-profile: prod
+      on-profile:
+        - blue
+        - green
   security:
     oauth2:
       client:

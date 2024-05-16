@@ -27,10 +27,12 @@ spring:
 spring:
   config:
     activate:
-      on-profile: prod
+      on-profile:
+        - blue
+        - green
   data:
     redis:
       url: jdbc:redis://43.203.229.26:18302/
+      password: wyplA602!@
       host: 43.203.229.26
       port: 18302
-      password: wyplA602!@

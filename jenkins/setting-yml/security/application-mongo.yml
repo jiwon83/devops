@@ -21,17 +21,19 @@ spring:
     mongodb:
       host: 43.203.229.26
       port: 8303
+      database: wypl
       username: wypl
       password: wyplA602!@
-      authentication-database: wypl
-      uri: mongodb://wypl:wyplA602!%40@43.203.229.26:8303/wypl
+      authentication-database: admin
 
 ---
 
 spring:
   config:
     activate:
-      on-profile: prod
+      on-profile:
+        - blue
+        - green
   data:
     mongodb:
       host: 43.203.229.26
@@ -39,5 +41,4 @@ spring:
       database: wypl
       username: wypl
       password: wyplA602!@
-      authentication-database: wypl
-      uri: mongodb://wypl:wyplA602!%40@43.203.229.26:18303/
+      authentication-database: admin
