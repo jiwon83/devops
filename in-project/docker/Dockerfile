@@ -7,4 +7,4 @@ LABEL MAINTAINER="Jiwon Han <gkswldnj0803@gmail.com>"
 COPY ./build/libs/*.jar wypl.jar
 
 # 애플리케이션 실행 명령
-ENTRYPOINT ["java", "-jar", "wypl.jar"]
+ENTRYPOINT ["java", "-jar","-Dspring.profiles.active=${PROFILE}", "wypl.jar"]

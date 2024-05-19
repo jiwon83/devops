@@ -11,8 +11,6 @@ server {
         server_name wypl.site;
 
         location / {
-                proxy_http_version 1.1;
-                proxy_set_header   "Connection" "";
                 return 301 https://wypl.site$request_uri;
         }
 }
@@ -26,8 +24,8 @@ server {
         ssl_certificate_key /etc/letsencrypt/live/wypl.site/privkey.pem;  # SSL 키 파일
 
         location / {
-		root /home/ubuntu/waffle/deploy/frontend;
+                root /home/ubuntu/waffle/deploy/frontend/dist;
                 index index.html index.htm;
                 try_files $uri $uri/ /index.html;
-	}
+        }
 }

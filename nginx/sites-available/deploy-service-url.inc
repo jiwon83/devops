@@ -1,0 +1,1 @@
+set $deploy_service_url http://43.203.229.26:58325;
